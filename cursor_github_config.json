@@ -1,0 +1,13 @@
+{
+  "github": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "@smithery/cli@latest",
+      "run",
+      "@smithery-ai/github",
+      "--config",
+      "{\"github-token\": \"YOUR_GITHUB_TOKEN_HERE\"}"
+    ]
+  }
+} 
