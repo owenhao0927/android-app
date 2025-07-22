@@ -13,19 +13,26 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.beidanci.ui.theme.*
 import kotlinx.coroutines.launch
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -336,19 +343,65 @@ fun BottomNavigationBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     
-    NavigationBar {
-        items.forEach { item ->
-            NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label) },
-                selected = currentRoute == item.route,
-                onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.startDestinationId)
-                        launchSingleTop = true
-                    }
-                }
-            )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shadowElevation = 16.dp,
+        color = androidx.compose.ui.graphics.Color.White
+    ) {
+        NavigationBar(
+            containerColor = androidx.compose.ui.graphics.Color.White,
+            contentColor = BlueAccent,
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            items.forEach { item ->
+                val isSelected = currentRoute == item.route
+                val iconColor = if (isSelected) BlueAccent else SecondaryText
+                val backgroundColor = if (isSelected) BlueAccent.copy(alpha = 0.1f) else androidx.compose.ui.graphics.Color.Transparent
+                
+                NavigationBarItem(
+                    icon = { 
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = backgroundColor,
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                item.icon, 
+                                contentDescription = item.label,
+                                tint = iconColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    },
+                    label = { 
+                        Text(
+                            text = item.label,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            ),
+                            color = iconColor
+                        ) 
+                    },
+                    selected = isSelected,
+                    onClick = {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.startDestinationId)
+                            launchSingleTop = true
+                        }
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = BlueAccent,
+                        selectedTextColor = BlueAccent,
+                        unselectedIconColor = SecondaryText,
+                        unselectedTextColor = SecondaryText,
+                        indicatorColor = androidx.compose.ui.graphics.Color.Transparent
+                    )
+                )
+            }
         }
     }
 }
@@ -412,81 +465,132 @@ fun HomePage(navController: NavController, favoriteWords: MutableList<Word>) {
 
     Scaffold(
         topBar = { 
-            TopAppBar(
-                title = { 
-                    Column {
-                        Text("今日词汇")
-                        if (totalWordsCount > 0) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = BlueAccent,
+                shadowElevation = 8.dp
+            ) {
+                TopAppBar(
+                    title = { 
+                        Column {
                             Text(
-                                text = "词库共 ${totalWordsCount} 个单词",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = "📚 今日词汇",
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 20.sp
+                                ),
+                                color = androidx.compose.ui.graphics.Color.White
                             )
+                            if (totalWordsCount > 0) {
+                                Text(
+                                    text = "词库共 ${totalWordsCount} 个单词",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent
+                    ),
+                    actions = {
+                        // 刷新按钮
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    generateNewWords()
+                                }
+                            },
+                            enabled = !isLoading,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.2f),
+                                contentColor = androidx.compose.ui.graphics.Color.White
+                            ),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            if (isLoading) {
+                                Text("生成中...", fontSize = 12.sp)
+                            } else {
+                                Text("🔄 刷新", fontSize = 12.sp)
+                            }
+                        }
+                        
+                        // 清除缓存按钮
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    context.clearAllWordCache()
+                                    loadWords()
+                                }
+                            },
+                            enabled = !isLoading,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = RedAccent.copy(alpha = 0.8f),
+                                contentColor = androidx.compose.ui.graphics.Color.White
+                            ),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text("🗑️", fontSize = 12.sp)
                         }
                     }
-                },
-                actions = {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                generateNewWords()
-                            }
-                        },
-                        enabled = !isLoading
-                    ) {
-                        if (isLoading) {
-                            Text("生成中...")
-                        } else {
-                            Text("🔄 刷新单词")
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            // TODO: 添加新功能入口
-                        },
-                        enabled = !isLoading,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        )
-                    ) {
-                        Text("✨ 新功能")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                context.clearAllWordCache()
-                                loadWords()
-                            }
-                        },
-                        enabled = !isLoading,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("🗑️ 清除缓存")
-                    }
-                }
-            ) 
+                ) 
+            }
         },
         floatingActionButton = {
-            Row {
-                FloatingActionButton(onClick = {
+            FloatingActionButton(
+                onClick = {
                     context.startActivity(Intent(context, PracticeActivity::class.java))
-                }) {
-                    Text("练习")
+                },
+                containerColor = GreenAccent,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .size(64.dp)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "开始练习",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "练习",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp
+                        )
+                    )
                 }
             }
         }
     ) { padding ->
-        if (todayWords.isEmpty() && !isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            BackgroundGradient1,
+                            BackgroundGradient2
+                        )
+                    )
+                )
+        ) {
+            if (todayWords.isEmpty() && !isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -506,13 +610,39 @@ fun HomePage(navController: NavController, favoriteWords: MutableList<Word>) {
                     )
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            } else if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            color = BlueAccent,
+                            strokeWidth = 4.dp,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text(
+                            text = "正在加载单词...",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = SecondaryText
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -535,8 +665,9 @@ fun HomePage(navController: NavController, favoriteWords: MutableList<Word>) {
                     )
                 }
                 
-                item {
-                    Spacer(modifier = Modifier.height(80.dp)) // 为FAB留出空间
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp)) // 为FAB留出空间
+                    }
                 }
             }
         }
@@ -552,56 +683,169 @@ fun WordCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = word.text ?: "未知单词",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = word.phonetic ?: "",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = word.partOfSpeech ?: "",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-                IconButton(onClick = onFavorite) {
-                    Icon(
-                        Icons.Default.Favorite,
-                        contentDescription = "收藏",
-                        tint = MaterialTheme.colorScheme.secondary
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = word.translation ?: "暂无翻译",
-                style = MaterialTheme.typography.bodyLarge
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp)
             )
-            
-            if (!word.example.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = word.example!!,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = CardGradient1
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(CardGradient1, CardGradient2)
+                    )
                 )
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        // 单词主体
+                        Text(
+                            text = word.text ?: "未知单词",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 24.sp
+                            ),
+                            color = BlueAccent
+                        )
+                        
+                        // 音标
+                        if (!word.phonetic.isNullOrEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "/${word.phonetic}/",
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = 16.sp
+                                ),
+                                color = SecondaryText
+                            )
+                        }
+                        
+                        // 词性
+                        if (!word.partOfSpeech.isNullOrEmpty()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = LightBlue.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    text = word.partOfSpeech!!,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    color = DeepBlue,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                    
+                    // 右侧按钮组
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 发音按钮
+                        IconButton(
+                            onClick = { /* TODO: 添加TTS发音功能 */ },
+                            modifier = Modifier
+                                .background(
+                                    color = GreenAccent.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                        ) {
+                            Icon(
+                                Icons.Default.VolumeUp,
+                                contentDescription = "发音",
+                                tint = GreenAccent
+                            )
+                        }
+                        
+                        // 收藏按钮
+                        IconButton(
+                            onClick = onFavorite,
+                            modifier = Modifier
+                                .background(
+                                    color = RedAccent.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                        ) {
+                            Icon(
+                                Icons.Default.Favorite,
+                                contentDescription = "收藏",
+                                tint = RedAccent
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // 翻译
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = BackgroundGradient2.copy(alpha = 0.5f)
+                ) {
+                    Text(
+                        text = word.translation ?: "暂无翻译",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = PrimaryText,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+                
+                // 例句
+                if (!word.example.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = OrangeAccent.copy(alpha = 0.1f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp)
+                        ) {
+                            Text(
+                                text = "💡 例句",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = DeepOrange
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = word.example!!,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                ),
+                                color = SecondaryText
+                            )
+                            // 例句翻译
+                            if (!word.exampleTranslation.isNullOrEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = word.exampleTranslation!!,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = SecondaryText.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -671,60 +915,175 @@ fun FavoritesPage(favoriteWords: List<Word>) {
 fun GameSelectionScreen(navController: NavController) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("🎮 游戏中心") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = DeepOrange,
+                shadowElevation = 8.dp
+            ) {
+                TopAppBar(
+                    title = { 
+                        Text(
+                            text = "🎮 游戏中心",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = androidx.compose.ui.graphics.Color.White
+                        ) 
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent
+                    )
                 )
-            )
+            }
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            LightOrange.copy(alpha = 0.1f),
+                            LightOrange.copy(alpha = 0.3f)
+                        )
+                    )
+                )
         ) {
-            Text(
-                text = "选择你喜欢的游戏",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = "选择你喜欢的游戏",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp
+                    ),
+                    color = DeepOrange
+                )
+                
+                // 贪吃蛇游戏卡片
+                EnhancedGameCard(
+                    title = "🐍 贪吃蛇",
+                    description = "经典贪吃蛇游戏\n控制蛇吃食物，避免撞到边界和自己",
+                    backgroundColor = GreenAccent,
+                    onClick = { navController.navigate("snake") }
+                )
+                
+                // 俄罗斯方块游戏卡片
+                EnhancedGameCard(
+                    title = "🧩 俄罗斯方块",
+                    description = "经典俄罗斯方块游戏\n旋转和移动方块，消除完整行获得分数",
+                    backgroundColor = BlueAccent,
+                    onClick = { navController.navigate("tetris") }
+                )
+                
+                // 新功能页面入口
+                val context = LocalContext.current
+                EnhancedGameCard(
+                    title = "✨ 新功能体验",
+                    description = "探索应用的新功能\n一个全新的页面等你来体验",
+                    backgroundColor = Purple40,
+                    onClick = { 
+                        // TODO: 添加新功能页面
+                    }
+                )
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                Text(
+                    text = "更多游戏敬请期待...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SecondaryText
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun EnhancedGameCard(
+    title: String,
+    description: String,
+    backgroundColor: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(20.dp)
             )
-            
-            // 贪吃蛇游戏卡片
-            GameCard(
-                title = "🐍 贪吃蛇",
-                description = "经典贪吃蛇游戏\n控制蛇吃食物，避免撞到边界和自己",
-                onClick = { navController.navigate("snake") }
-            )
-            
-            // 俄罗斯方块游戏卡片
-            GameCard(
-                title = "🧩 俄罗斯方块",
-                description = "经典俄罗斯方块游戏\n旋转和移动方块，消除完整行获得分数",
-                onClick = { navController.navigate("tetris") }
-            )
-            
-            // 新功能页面入口
-            val context = LocalContext.current
-            GameCard(
-                title = "✨ 新功能体验",
-                description = "探索应用的新功能\n一个全新的页面等你来体验",
-                onClick = { 
-                    // TODO: 添加新功能页面
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = androidx.compose.ui.graphics.Color.White
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            backgroundColor.copy(alpha = 0.1f),
+                            backgroundColor.copy(alpha = 0.3f)
+                        )
+                    )
+                )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        ),
+                        color = backgroundColor
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SecondaryText,
+                        lineHeight = 20.sp
+                    )
                 }
-            )
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            Text(
-                text = "更多游戏敬请期待...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+                
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = backgroundColor,
+                    modifier = Modifier.size(60.dp)
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "开始游戏",
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }

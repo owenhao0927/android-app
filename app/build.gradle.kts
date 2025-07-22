@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,14 +20,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // 从local.properties读取API密钥
-        val properties = java.util.Properties()
         val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
+        val apiKey = if (localPropertiesFile.exists()) {
+            val properties = Properties()
             properties.load(localPropertiesFile.inputStream())
+            properties.getProperty("OPENAI_API_KEY", "")
+        } else {
+            ""
         }
         
         // 添加OpenAI API密钥到BuildConfig
-        buildConfigField("String", "OPENAI_API_KEY", "\"${properties.getProperty("OPENAI_API_KEY", "")}\"")
+        buildConfigField("String", "OPENAI_API_KEY", "\"$apiKey\"")
     }
 
     buildTypes {
