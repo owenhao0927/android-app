@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -266,6 +267,9 @@ fun WordApp() {
             composable("settings") {
                 SettingsScreen()
             }
+            composable("camera") {
+                CameraScreen()
+            }
             composable("detail/{word}") { backStackEntry ->
                 Log.d("WordApp", "进入 detail 页面")
                 val wordJson = backStackEntry.arguments?.getString("word")
@@ -336,6 +340,7 @@ fun BottomNavigationBar(navController: NavController) {
         BottomNavItem("home", "首页", Icons.Default.Home),
         BottomNavItem("wordbank", "词库", Icons.Default.Star),
         BottomNavItem("favorites", "收藏", Icons.Default.Favorite),
+        BottomNavItem("camera", "摄像头", Icons.Default.CameraAlt),
         BottomNavItem("game", "游戏", Icons.Default.PlayArrow),
         BottomNavItem("settings", "设置", Icons.Default.Settings)
     )
